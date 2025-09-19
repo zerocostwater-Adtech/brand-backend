@@ -2,11 +2,23 @@
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   try {
+    // 🔑 Optional: secure with API key
+    if (req.headers["x-api-key"] !== process.env.API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     const { zapType, payload } = req.body;
+
+    if (!zapType || typeof zapType !== "string") {
+      return res.status(400).json({ error: "zapType is required" });
+    }
+    if (!payload || typeof payload !== "object") {
+      return res.status(400).json({ error: "payload must be an object" });
+    }
 
     // 🔑 Map zapType to environment variables
     const ZAP_MAP = {
@@ -39,6 +51,14 @@ export default async function handler(req, res) {
       data = await response.json();
     } catch {
       data = {};
+    }
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: "Zapier responded with error",
+        details: data,
+      });
     }
 
     return res.status(200).json({ success: true, data });
