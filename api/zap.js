@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // allow all temporarily
+  res.setHeader("Access-Control-Allow-Origin", "*"); // temporarily allow all
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -8,6 +8,7 @@ export default async function handler(req, res) {
 
   try {
     const { zapType, payload } = req.body;
+    console.log("🚀 Incoming request:", zapType, payload);
 
     const WEBHOOKS = {
       OTP_GENERATION: process.env.ZAP_OTP_GENERATION,
@@ -20,9 +21,12 @@ export default async function handler(req, res) {
     };
 
     const webhookUrl = WEBHOOKS[zapType];
-    if (!webhookUrl) return res.status(500).json({ success: false, error: `Webhook not set for ${zapType}` });
+    if (!webhookUrl) {
+      console.error("❌ Invalid zapType or missing webhook:", zapType);
+      return res.status(500).json({ success: false, error: `Webhook not set for ${zapType}` });
+    }
 
-    console.log("➡ Forwarding to Zapier:", zapType, webhookUrl, payload);
+    console.log("➡ Forwarding to Zapier:", zapType, webhookUrl);
 
     const zapRes = await fetch(webhookUrl, {
       method: "POST",
@@ -31,6 +35,8 @@ export default async function handler(req, res) {
     });
 
     const text = await zapRes.text();
+    console.log("⬅ Zapier raw response:", text);
+
     let data;
     try {
       data = JSON.parse(text);
@@ -40,12 +46,13 @@ export default async function handler(req, res) {
     }
 
     if (!zapRes.ok) {
-      console.error("❌ Zapier error status:", zapRes.status, data);
+      console.error("❌ Zapier returned error status:", zapRes.status, data);
       return res.status(500).json({ success: false, error: "Zapier returned error", details: data });
     }
 
-    console.log("✅ Zapier response:", data);
+    console.log("✅ Zapier success response:", data);
     return res.status(200).json({ success: true, data });
+
   } catch (err) {
     console.error("❌ Zap Proxy Error:", err);
     return res.status(500).json({ success: false, error: "Zapier proxy failed", details: err.message });
