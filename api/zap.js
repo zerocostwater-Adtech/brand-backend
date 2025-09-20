@@ -1,7 +1,16 @@
 // /api/zap.js
 
 export default async function handler(req, res) {
-  // Only allow POST
+  // === CORS HEADERS ===
+  res.setHeader("Access-Control-Allow-Origin", "https://zerocostwater.lovable.app"); // your frontend domain
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
@@ -9,7 +18,7 @@ export default async function handler(req, res) {
   try {
     const { zapType, payload } = req.body;
 
-    // Map Zap Types → Zapier Webhook URLs (from .env in Vercel)
+    // === Zapier Webhook URLs ===
     const WEBHOOKS = {
       OTP_GENERATION: process.env.ZAP_OTP_GENERATION,
       SEND_VERIFY_OTP: process.env.ZAP_SEND_VERIFY_OTP,
@@ -35,22 +44,10 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    // Handle response safely (Zapier may return text, empty body, or JSON)
-    const text = await zapRes.text();
-    let data;
-    try {
-      data = JSON.parse(text); // try parsing as JSON
-    } catch {
-      data = { raw: text }; // fallback if response isn’t JSON
-    }
+    // Parse Zapier response (empty fallback)
+    const data = await zapRes.json().catch(() => ({}));
 
-    // Always return valid JSON to frontend
-    return res.status(200).json({
-      success: true,
-      zapType,
-      zapierStatus: zapRes.status,
-      data,
-    });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     console.error("Zap Proxy Error:", err);
     return res.status(500).json({ error: "Zapier proxy failed" });
