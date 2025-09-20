@@ -1,8 +1,8 @@
-// /api/zap.js
+// backend/api/zap.js
 
 export default async function handler(req, res) {
   // === CORS HEADERS ===
-  res.setHeader("Access-Control-Allow-Origin", "https://zerocostwater.lovable.app"); // your frontend domain
+  res.setHeader("Access-Control-Allow-Origin", "*"); // temporarily allow all for debugging
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -26,16 +26,16 @@ export default async function handler(req, res) {
       CAMPAIGN_ANALYTICS: process.env.ZAP_CAMPAIGN_ANALYTICS,
       BRAND_AUTH: process.env.ZAP_BRAND_AUTH,
       ADMIN_AUTH: process.env.ZAP_ADMIN_AUTH,
-      CAMPAIGN_MANAGEMENT: process.env.ZAP_CAMPAIGN_MANAGEMENT,
-      LEGAL_COMPLIANCE: process.env.ZAP_LEGAL_COMPLIANCE,
-      PREDICTIVE_ANALYTICS: process.env.ZAP_PREDICTIVE_ANALYTICS,
       BRAND_INQUIRY: process.env.ZAP_BRAND_INQUIRY,
     };
 
     const webhookUrl = WEBHOOKS[zapType];
     if (!webhookUrl) {
-      return res.status(400).json({ error: "Invalid zapType" });
+      console.error("❌ Invalid zapType:", zapType);
+      return res.status(400).json({ success: false, error: "Invalid zapType" });
     }
+
+    console.log("➡️ Forwarding to Zapier:", zapType, webhookUrl, payload);
 
     // Forward request to Zapier
     const zapRes = await fetch(webhookUrl, {
@@ -44,12 +44,20 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    // Parse Zapier response (empty fallback)
-    const data = await zapRes.json().catch(() => ({}));
+    const text = await zapRes.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      console.error("❌ Zapier returned invalid JSON:", text);
+      return res.status(500).json({ success: false, error: "Invalid JSON from Zapier", raw: text });
+    }
 
-    return res.status(200).json({ success: true, data });
+    console.log("✅ Zapier response:", data);
+
+    return res.status(200).json({ success: true, ...data });
   } catch (err) {
-    console.error("Zap Proxy Error:", err);
-    return res.status(500).json({ error: "Zapier proxy failed" });
+    console.error("❌ Zap Proxy Error:", err);
+    return res.status(500).json({ success: false, error: "Zapier proxy failed" });
   }
 }
