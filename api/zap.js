@@ -1,6 +1,7 @@
 // /api/zap.js
 
 export default async function handler(req, res) {
+  // Only allow POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
@@ -34,9 +35,22 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    const data = await zapRes.json().catch(() => ({}));
+    // Handle response safely (Zapier may return text, empty body, or JSON)
+    const text = await zapRes.text();
+    let data;
+    try {
+      data = JSON.parse(text); // try parsing as JSON
+    } catch {
+      data = { raw: text }; // fallback if response isn’t JSON
+    }
 
-    return res.status(200).json({ success: true, data });
+    // Always return valid JSON to frontend
+    return res.status(200).json({
+      success: true,
+      zapType,
+      zapierStatus: zapRes.status,
+      data,
+    });
   } catch (err) {
     console.error("Zap Proxy Error:", err);
     return res.status(500).json({ error: "Zapier proxy failed" });
