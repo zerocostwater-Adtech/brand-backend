@@ -11,16 +11,16 @@ export default async function handler(req, res) {
 
     // Map Zap Types → Zapier Webhook URLs (from .env in Vercel)
     const WEBHOOKS = {
-      OTP_GENERATION: process.env.ZAPIER_OTP_GENERATION,
-      SEND_VERIFY_OTP: process.env.ZAPIER_SEND_VERIFY_OTP,
-      USER_ENGAGEMENT: process.env.ZAPIER_USER_ENGAGEMENT,
-      CAMPAIGN_ANALYTICS: process.env.ZAPIER_CAMPAIGN_ANALYTICS,
-      BRAND_AUTH: process.env.ZAPIER_BRAND_AUTH,
-      ADMIN_AUTH: process.env.ZAPIER_ADMIN_AUTH,
-      CAMPAIGN_MANAGEMENT: process.env.ZAPIER_CAMPAIGN_MANAGEMENT,
-      LEGAL_COMPLIANCE: process.env.ZAPIER_LEGAL_COMPLIANCE,
-      PREDICTIVE_ANALYTICS: process.env.ZAPIER_PREDICTIVE_ANALYTICS,
-      BRAND_INQUIRY: process.env.ZAPIER_BRAND_INQUIRY,
+      OTP_GENERATION: process.env.ZAP_OTP_GENERATION,
+      SEND_VERIFY_OTP: process.env.ZAP_SEND_VERIFY_OTP,
+      USER_ENGAGEMENT: process.env.ZAP_USER_ENGAGEMENT,
+      CAMPAIGN_ANALYTICS: process.env.ZAP_CAMPAIGN_ANALYTICS,
+      BRAND_AUTH: process.env.ZAP_BRAND_AUTH,
+      ADMIN_AUTH: process.env.ZAP_ADMIN_AUTH,
+      CAMPAIGN_MANAGEMENT: process.env.ZAP_CAMPAIGN_MANAGEMENT,
+      LEGAL_COMPLIANCE: process.env.ZAP_LEGAL_COMPLIANCE,
+      PREDICTIVE_ANALYTICS: process.env.ZAP_PREDICTIVE_ANALYTICS,
+      BRAND_INQUIRY: process.env.ZAP_BRAND_INQUIRY,
     };
 
     const webhookUrl = WEBHOOKS[zapType];
