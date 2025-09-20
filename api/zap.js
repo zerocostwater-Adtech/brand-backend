@@ -2,7 +2,7 @@
 
 export default async function handler(req, res) {
   // === CORS HEADERS ===
-  res.setHeader("Access-Control-Allow-Origin", "*"); // temporarily allow all for debugging
+  res.setHeader("Access-Control-Allow-Origin", "*"); // allow all for debugging
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -12,13 +12,13 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
   try {
     const { zapType, payload } = req.body;
 
-    // === Zapier Webhook URLs ===
+    // === Zapier Webhook URLs (must be set in Vercel env vars) ===
     const WEBHOOKS = {
       OTP_GENERATION: process.env.ZAP_OTP_GENERATION,
       SEND_VERIFY_OTP: process.env.ZAP_SEND_VERIFY_OTP,
@@ -26,18 +26,21 @@ export default async function handler(req, res) {
       CAMPAIGN_ANALYTICS: process.env.ZAP_CAMPAIGN_ANALYTICS,
       BRAND_AUTH: process.env.ZAP_BRAND_AUTH,
       ADMIN_AUTH: process.env.ZAP_ADMIN_AUTH,
+      CAMPAIGN_MANAGEMENT: process.env.ZAP_CAMPAIGN_MANAGEMENT,
+      LEGAL_COMPLIANCE: process.env.ZAP_LEGAL_COMPLIANCE,
+      PREDICTIVE_ANALYTICS: process.env.ZAP_PREDICTIVE_ANALYTICS,
       BRAND_INQUIRY: process.env.ZAP_BRAND_INQUIRY,
     };
 
     const webhookUrl = WEBHOOKS[zapType];
+
     if (!webhookUrl) {
-      console.error("❌ Invalid zapType:", zapType);
-      return res.status(400).json({ success: false, error: "Invalid zapType" });
+      console.error("❌ Invalid or missing Zapier webhook URL for zapType:", zapType);
+      return res.status(500).json({ success: false, error: "Webhook URL not configured for this zapType" });
     }
 
-    console.log("➡️ Forwarding to Zapier:", zapType, webhookUrl, payload);
+    console.log("➡️ Forwarding request to Zapier:", zapType, webhookUrl, payload);
 
-    // Forward request to Zapier
     const zapRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,11 +56,16 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: "Invalid JSON from Zapier", raw: text });
     }
 
-    console.log("✅ Zapier response:", data);
+    if (!zapRes.ok) {
+      console.error("❌ Zapier responded with error status:", zapRes.status, data);
+      return res.status(500).json({ success: false, error: "Zapier returned error", details: data });
+    }
 
-    return res.status(200).json({ success: true, ...data });
+    console.log("✅ Zapier response received:", data);
+
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     console.error("❌ Zap Proxy Error:", err);
-    return res.status(500).json({ success: false, error: "Zapier proxy failed" });
+    return res.status(500).json({ success: false, error: "Zapier proxy failed", details: err.message });
   }
 }
